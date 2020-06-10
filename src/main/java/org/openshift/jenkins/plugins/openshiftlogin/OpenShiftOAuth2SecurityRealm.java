@@ -135,6 +135,8 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
     private static final String LOGIN_URL = "securityRealm/commenceLogin";
 
     private static final String USER_URI = "/apis/user.openshift.io/v1/users/~";
+    private static final String GROUPS_URI = "/apis/user.openshift.io/v1/groups/~";
+
     private static final String SAR_URI = "/apis/authorization.openshift.io/v1/subjectaccessreviews";
     private static final String CONFIG_MAP_URI = "/api/v1/namespaces/%s/configmaps/openshift-jenkins-login-plugin-config";
     private static final String OAUTH_PROVIDER_URI = "/.well-known/oauth-authorization-server";
@@ -643,14 +645,22 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
         GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + USER_URI);
         HttpRequest request = requestFactory.buildGetRequest(url);
-	
-	// 
-        // ELOS test log entry
-	//
-	if (LOGGER.isLoggable(FINE))
-            LOGGER.fine("ISSUE RBO2-78: Test log..  " + request );
-			
-	OpenShiftUserInfo info = request.execute().parseAs(OpenShiftUserInfo.class);
+	    OpenShiftUserInfo info = request.execute().parseAs(OpenShiftUserInfo.class);
+        
+        // 
+        //      ELOS test groups call entry
+        //
+        // GROUPS_URI
+        
+        url = new GenericUrl(getDefaultedServerPrefix() + GROUPS_URI);
+        request = requestFactory.buildGetRequest(url);
+        // com.google.api.client.http.HttpResponse 
+        String response = request.execute().parseAsString();
+        
+        if (LOGGER.isLoggable(FINE))
+            LOGGER.fine("ISSUE RBO2-78: Test log..  " + response );
+
+        
         return info;
     }
 

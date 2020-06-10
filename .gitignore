@@ -8,3 +8,4 @@ target/
 /Dockerfile-jenkins-ext-oauth
 /sa/
 PR-Testing/
+.factorypath
