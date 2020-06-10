@@ -643,7 +643,14 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
         GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + USER_URI);
         HttpRequest request = requestFactory.buildGetRequest(url);
-        OpenShiftUserInfo info = request.execute().parseAs(OpenShiftUserInfo.class);
+	
+	// 
+        // ELOS test log entry
+	//
+	if (LOGGER.isLoggable(FINE))
+            LOGGER.fine("ISSUE RBO2-78: Test log..  " + request );
+			
+	OpenShiftUserInfo info = request.execute().parseAs(OpenShiftUserInfo.class);
         return info;
     }
 
