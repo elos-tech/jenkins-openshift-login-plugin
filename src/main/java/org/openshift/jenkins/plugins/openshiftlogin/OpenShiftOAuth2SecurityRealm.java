@@ -60,18 +60,6 @@ import java.util.logging.Logger;
 import javax.net.ssl.SSLHandshakeException;
 import javax.servlet.ServletException;
 
-import org.acegisecurity.Authentication;
-import org.acegisecurity.GrantedAuthority;
-import org.acegisecurity.context.SecurityContextHolder;
-import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.Header;
-import org.kohsuke.stapler.HttpRedirect;
-import org.kohsuke.stapler.HttpResponse;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
-
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.google.api.client.auth.oauth2.AuthorizationCodeFlow;
 import com.google.api.client.auth.oauth2.BearerToken;
@@ -85,6 +73,18 @@ import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.util.SecurityUtils;
+
+import org.acegisecurity.Authentication;
+import org.acegisecurity.GrantedAuthority;
+import org.acegisecurity.context.SecurityContextHolder;
+import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.Header;
+import org.kohsuke.stapler.HttpRedirect;
+import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.Stapler;
+import org.kohsuke.stapler.StaplerRequest;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.EnvVars;
@@ -123,7 +123,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
      */
     private static final String SCOPE_INFO = "user:info";
     private static final String SCOPE_CHECK_ACCESS = "user:check-access";
-    private static final String SCOPE_ROLE_ACCESS = "role:grpviewonly:*";
+    // private static final String SCOPE_ROLE_ACCESS = "role:grpviewonly:*";
 
     static final String DEFAULT_SVC_ACCT_DIR = "/run/secrets/kubernetes.io/serviceaccount";
     static final String DEFAULT_SVR_PREFIX = "https://kubernetes.default:443";
@@ -137,7 +137,6 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
 
     private static final String USER_URI = "/apis/user.openshift.io/v1/users/~";
     private static final String GROUPS_URI = "/apis/user.openshift.io/v1/groups";
-    // private static final String GROUPS_URI = "/oapi/v1/groups/~";
 
     private static final String SAR_URI = "/apis/authorization.openshift.io/v1/subjectaccessreviews";
     private static final String CONFIG_MAP_URI = "/api/v1/namespaces/%s/configmaps/openshift-jenkins-login-plugin-config";
@@ -666,12 +665,11 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + GROUPS_URI);
             HttpRequest request = requestFactory.buildGetRequest(url);
             
-            // com.google.api.client.http.HttpResponse 
-            String response = request.execute().parseAsString();
+            OpenShiftGroupList groups = request.execute().parseAs(OpenShiftGroupList.class);
             
             if (LOGGER.isLoggable(INFO))
-                LOGGER.info("ISSUE RBO2-78: getOpenShiftGroupsInfo:  " + response );
-            return response;
+                LOGGER.info("ISSUE RBO2-78: getOpenShiftGroups:  " + groups.toString());
+            return groups.toString();
     }
     private String buildSARJson(String namespace, String verb) throws IOException {
         OpenShiftSubjectAccessReviewRequest request = new OpenShiftSubjectAccessReviewRequest();
