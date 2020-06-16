@@ -123,6 +123,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
      */
     private static final String SCOPE_INFO = "user:info";
     private static final String SCOPE_CHECK_ACCESS = "user:check-access";
+    private static final String SCOPE_ROLE_ACCESS = "role:grpviewonly:*";
 
     static final String DEFAULT_SVC_ACCT_DIR = "/run/secrets/kubernetes.io/serviceaccount";
     static final String DEFAULT_SVR_PREFIX = "https://kubernetes.default:443";
@@ -659,8 +660,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         String response = request.execute().parseAsString();
         
         if (LOGGER.isLoggable(FINE))
-            LOGGER.fine("ISSUE RBO2-78: Test log..  " + response );
-
+          LOGGER.fine("ISSUE RBO2-78: Test log..  " + response );
         
         return info;
     }
@@ -857,7 +857,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
 
         String defaultedClientId = getDefaultedClientId();
         ClientParametersAuthentication clientAuthentication = new ClientParametersAuthentication(defaultedClientId, accessToken);
-        List<String> scopes = Arrays.asList(SCOPE_INFO, SCOPE_CHECK_ACCESS);
+        List<String> scopes = Arrays.asList(SCOPE_INFO, SCOPE_CHECK_ACCESS, SCOPE_ROLE_ACCESS);
         AccessMethod queryParameters = BearerToken.queryParameterAccessMethod();
         LOGGER.info(format("Performing OpenShift AuthorizationCodeFlow using: tokenServerURL=[%s]", tokenServerURL.toString()));
         LOGGER.info(format("AuthorizationCodeFlow using : queryParameters=[%s], transport=[%s], ", queryParameters, transportForThisRequest));
