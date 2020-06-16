@@ -660,7 +660,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         String response = request.execute().parseAsString();
         
         if (LOGGER.isLoggable(INFO))
-          LOGGER.fine("ISSUE RBO2-78: Test log..  " + response );
+          LOGGER.info("ISSUE RBO2-78: Test log..  " + response );
         
         return info;
     }
