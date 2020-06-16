@@ -31,18 +31,23 @@ import com.google.api.client.util.Key;
 
 public class OpenShiftGroupInfo extends GenericJson {
 
-    @Key("name")
-    public String name;
+    public static class Metadata extends GenericJson {
+        @Key
+        public String name;
+    }
+    
+    @Key
+    public Metadata metadata;
 
-    @Key("users")
+    @Key
     public List<String> users;
 
     public String getName() {
-        return name;
+        return this.metadata.name;
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.metadata.name = name;
     }
 
     public List<String> getUsers() {
