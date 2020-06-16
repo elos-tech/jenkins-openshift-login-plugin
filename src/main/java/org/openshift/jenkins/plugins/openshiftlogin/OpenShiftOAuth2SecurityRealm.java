@@ -666,9 +666,10 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             HttpRequest request = requestFactory.buildGetRequest(url);
             
             OpenShiftGroupList groups = request.execute().parseAs(OpenShiftGroupList.class);
+            String groupsString = request.execute().parseAsString();
             
             if (LOGGER.isLoggable(INFO))
-                LOGGER.info("ISSUE RBO2-78: getOpenShiftGroups:  " + groups.toString());
+                LOGGER.info("ISSUE RBO2-78: getOpenShiftGroups:  " + groupsString);
             return groups.toString();
     }
     private String buildSARJson(String namespace, String verb) throws IOException {
