@@ -659,7 +659,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         // com.google.api.client.http.HttpResponse 
         String response = request.execute().parseAsString();
         
-        if (LOGGER.isLoggable(FINE))
+        if (LOGGER.isLoggable(INFO))
           LOGGER.fine("ISSUE RBO2-78: Test log..  " + response );
         
         return info;
