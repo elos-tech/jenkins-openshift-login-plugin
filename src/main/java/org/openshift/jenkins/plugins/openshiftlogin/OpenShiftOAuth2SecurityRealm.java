@@ -136,7 +136,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
     private static final String LOGIN_URL = "securityRealm/commenceLogin";
 
     private static final String USER_URI = "/apis/user.openshift.io/v1/users/~";
-    private static final String GROUPS_URI = "/apis/user.openshift.io/v1/groups/~";
+    private static final String GROUPS_URI = "/apis/user.openshift.io/v1/groups";
     // private static final String GROUPS_URI = "/oapi/v1/groups/~";
 
     private static final String SAR_URI = "/apis/authorization.openshift.io/v1/subjectaccessreviews";
