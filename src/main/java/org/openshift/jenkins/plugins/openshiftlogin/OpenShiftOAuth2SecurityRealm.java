@@ -668,8 +668,10 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             OpenShiftGroupList groups = request.execute().parseAs(OpenShiftGroupList.class);
             String groupsString = request.execute().parseAsString();
             
-            if (LOGGER.isLoggable(INFO))
-                LOGGER.info("ISSUE RBO2-78: getOpenShiftGroups:  " + groupsString);
+            if (LOGGER.isLoggable(FINE)) {
+                LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups:  " + groupsString);
+                LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups: pasrsing list0: " + groups.getGroups().get(0).toString());
+            }
             return groups.getGroups().toString();
     }
     private String buildSARJson(String namespace, String verb) throws IOException {
