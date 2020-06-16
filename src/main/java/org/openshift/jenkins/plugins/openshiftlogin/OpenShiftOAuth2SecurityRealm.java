@@ -411,6 +411,14 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             } else {
                 runningInOpenShiftPodWithRequiredOAuthFeatures = false;
             }
+            //      ELOS test groups call entry
+            //
+            String groups = getOpenShiftGroupsInfo(credential, transport);
+            
+            if (LOGGER.isLoggable(INFO))
+                LOGGER.info("ISSUE RBO2-78: Test log..  " + groups);
+
+
         } catch (Throwable t) {
             runningInOpenShiftPodWithRequiredOAuthFeatures = false;
             if (LOGGER.isLoggable(Level.FINE))
@@ -648,23 +656,23 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + USER_URI);
         HttpRequest request = requestFactory.buildGetRequest(url);
 	    OpenShiftUserInfo info = request.execute().parseAs(OpenShiftUserInfo.class);
-        
-        // 
-        //      ELOS test groups call entry
-        //
-        // GROUPS_URI
-        
-        url = new GenericUrl(getDefaultedServerPrefix() + GROUPS_URI);
-        request = requestFactory.buildGetRequest(url);
-        // com.google.api.client.http.HttpResponse 
-        String response = request.execute().parseAsString();
-        
-        if (LOGGER.isLoggable(INFO))
-          LOGGER.info("ISSUE RBO2-78: Test log..  " + response );
-        
         return info;
     }
-
+    private String getOpenShiftGroupsInfo(final Credential credential, final HttpTransport transport)
+            throws IOException {
+            //      ELOS test groups call entry
+            // OpenShiftGroupsInfo        
+            HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
+            GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + GROUPS_URI);
+            HttpRequest request = requestFactory.buildGetRequest(url);
+            
+            // com.google.api.client.http.HttpResponse 
+            String response = request.execute().parseAsString();
+            
+            if (LOGGER.isLoggable(INFO))
+                LOGGER.info("ISSUE RBO2-78: getOpenShiftGroupsInfo:  " + response );
+            return response;
+    }
     private String buildSARJson(String namespace, String verb) throws IOException {
         OpenShiftSubjectAccessReviewRequest request = new OpenShiftSubjectAccessReviewRequest();
         request.namespace = namespace;
