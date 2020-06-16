@@ -49,7 +49,9 @@ import java.security.KeyStoreException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -670,8 +672,14 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             
             if (LOGGER.isLoggable(FINE)) {
                 LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups:  " + groupsString);
-                LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups: parsing list0 group name: " + groups.getGroups().get(0).getName());
-                LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups: parsing list0 users: " + groups.getGroups().get(0).getUsers().toString());
+                List<OpenShiftGroupInfo> list = groups.getGroups();
+                Iterator<OpenShiftGroupInfo> it = list.iterator();
+                OpenShiftGroupInfo info = null;
+                while (it.hasNext()) {
+                    info = it.next();
+                    LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups: parsing list0 group name: " + info.getName());
+                    LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups: parsing list0 users: " + info.getUsers().toString());
+                }
             }
             return groups.getGroups().toString();
     }
