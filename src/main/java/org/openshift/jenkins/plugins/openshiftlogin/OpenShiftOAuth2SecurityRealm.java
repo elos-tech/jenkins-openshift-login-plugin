@@ -857,7 +857,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
 
         String defaultedClientId = getDefaultedClientId();
         ClientParametersAuthentication clientAuthentication = new ClientParametersAuthentication(defaultedClientId, accessToken);
-        List<String> scopes = Arrays.asList(SCOPE_INFO, SCOPE_CHECK_ACCESS, SCOPE_ROLE_ACCESS);
+        List<String> scopes = Arrays.asList(SCOPE_INFO, SCOPE_CHECK_ACCESS);//, SCOPE_ROLE_ACCESS);
         AccessMethod queryParameters = BearerToken.queryParameterAccessMethod();
         LOGGER.info(format("Performing OpenShift AuthorizationCodeFlow using: tokenServerURL=[%s]", tokenServerURL.toString()));
         LOGGER.info(format("AuthorizationCodeFlow using : queryParameters=[%s], transport=[%s], ", queryParameters, transportForThisRequest));
