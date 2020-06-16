@@ -31,7 +31,7 @@ import com.google.api.client.util.Key;
 
 public class OpenShiftGroupInfo extends GenericJson {
 
-    @Key("metadata.name")
+    @Key("name")
     public String name;
 
     @Key("users")

@@ -670,7 +670,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             
             if (LOGGER.isLoggable(FINE)) {
                 LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups:  " + groupsString);
-                LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups: parsing list0: " + groups.getGroups().get(0).getName());
+                LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups: parsing list0 group name: " + groups.getGroups().get(0).getName());
                 LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups: parsing list0 users: " + groups.getGroups().get(0).getUsers().toString());
             }
             return groups.getGroups().toString();
