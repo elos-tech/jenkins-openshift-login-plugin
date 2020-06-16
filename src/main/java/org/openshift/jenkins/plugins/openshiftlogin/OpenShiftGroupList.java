@@ -34,7 +34,7 @@ public class OpenShiftGroupList {
   @Key("items")
   private List<OpenShiftGroupInfo> groups;
 
-  public List<OpenShiftGroupInfo> getgroups() {
+  public List<OpenShiftGroupInfo> getGroups() {
     return groups;
   }
 }

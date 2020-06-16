@@ -670,7 +670,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             
             if (LOGGER.isLoggable(INFO))
                 LOGGER.info("ISSUE RBO2-78: getOpenShiftGroups:  " + groupsString);
-            return groups.toString();
+            return groups.getGroups().toString();
     }
     private String buildSARJson(String namespace, String verb) throws IOException {
         OpenShiftSubjectAccessReviewRequest request = new OpenShiftSubjectAccessReviewRequest();
