@@ -1005,8 +1005,14 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
                                     }
                                 }
                             }
+                            // ELOS inject test user group
+                            Permission injPerm = Hudson.READ;
+                            newAuthMgr.add(injPerm, "ELOS testUserGroup");
 
+                            if (LOGGER.isLoggable(Level.FINE))
+                                LOGGER.fine(String.format("ELOS updateAuthorizationStrategy: groups test inject call "));
                         }
+                        
 
                         // map OpenShift user based on role to Jenkins user with
                         // analogous permissions
