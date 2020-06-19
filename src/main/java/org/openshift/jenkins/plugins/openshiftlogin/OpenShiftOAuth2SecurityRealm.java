@@ -972,7 +972,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
                     LOGGER.fine(String.format("updateAuthorizationStrategy: got users %s where this user is %s",
                             usersGroups.toString(), info.getName()));
 
-                if (usersGroups.contains(matrixKey)) {
+                if (usersGroups.contains(matrixKey) && false) { // ELOS hack to induce matrix update
                     // since we store username-maxrole in the auth matrix, we
                     // can infer that since this user-role pair already exists
                     // as a key, there is no need to update the matrix
