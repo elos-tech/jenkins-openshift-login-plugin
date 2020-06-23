@@ -414,7 +414,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             }
             //      ELOS test groups call entry
             //
-            String groups = getOpenShiftGroupsInfo(credential, transport);
+            String groups = setOpenShiftGroups(credential, transport);
             
             if (LOGGER.isLoggable(INFO))
                 LOGGER.info("ISSUE RBO2-78: Test log..  " + groups);
@@ -659,7 +659,9 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
 	    OpenShiftUserInfo info = request.execute().parseAs(OpenShiftUserInfo.class);
         return info;
     }
-    private String getOpenShiftGroupsInfo(final Credential credential, final HttpTransport transport)
+
+
+    private String setOpenShiftGroups(final Credential credential, final HttpTransport transport)
             throws IOException {
             //      ELOS test groups call entry
             // OpenShiftGroupsInfo        
@@ -669,20 +671,87 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             
             OpenShiftGroupList groups = request.execute().parseAs(OpenShiftGroupList.class);
             String groupsString = request.execute().parseAsString();
+
+            updateAuthorizationStrategyWithGroups(groups);
             
             if (LOGGER.isLoggable(FINE)) {
-                LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups:  " + groupsString);
+                LOGGER.fine("ISSUE RBO2-78: setOpenShiftGroups:  " + groupsString);
                 List<OpenShiftGroupInfo> list = groups.getGroups();
                 Iterator<OpenShiftGroupInfo> it = list.iterator();
                 OpenShiftGroupInfo info = null;
                 while (it.hasNext()) {
                     info = it.next();
-                    LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups: parsing list0 group name: " + info.getName());
-                    LOGGER.fine("ISSUE RBO2-78: getOpenShiftGroups: parsing list0 users: " + info.getUsers().toString());
+                    LOGGER.fine("ISSUE RBO2-78: setOpenShiftGroups: parsing list0 group name: " + info.getName());
+                    LOGGER.fine("ISSUE RBO2-78: setOpenShiftGroups: parsing list0 users: " + info.getUsers().toString());
                 }
             }
             return groups.getGroups().toString();
     }
+
+    // ELOS
+    public void updateAuthorizationStrategyWithGroups(OpenShiftGroupList groupList) {
+
+        synchronized (USER_UPDATE_LOCK) {
+            GlobalMatrixAuthorizationStrategy existingAuthMgr = (GlobalMatrixAuthorizationStrategy) Jenkins
+                    .getInstance().getAuthorizationStrategy();
+            Set<String> usersGroups = existingAuthMgr.getGroups();
+    
+            List<PermissionGroup> permissionGroups = new ArrayList<PermissionGroup>(PermissionGroup.getAll());
+            if (LOGGER.isLoggable(Level.FINE))
+                LOGGER.fine(String.format("updateAuthorizationStrategy: permissions %s",
+                        permissionGroups.toString()));
+    
+            GlobalMatrixAuthorizationStrategy newAuthMgr = null;
+            if (existingAuthMgr instanceof ProjectMatrixAuthorizationStrategy) {
+                newAuthMgr = new ProjectMatrixAuthorizationStrategy();
+            } else {
+                newAuthMgr = new GlobalMatrixAuthorizationStrategy();
+            }
+    
+            if (newAuthMgr != null) {
+                for (String userGroup : usersGroups) {
+                    // copy any of the other users' permissions from the
+                    // prior auth mgr to our new one
+                    for (PermissionGroup pg : permissionGroups) {
+                        for (Permission p : pg.getPermissions()) {
+                            if (existingAuthMgr.hasPermission(userGroup, p)) {
+                                newAuthMgr.add(p, userGroup);
+                            }
+                        }
+                    }
+                    // ELOS inject OCP user groups
+                    Permission injPerm = Hudson.READ;
+                    
+                    
+                    List<OpenShiftGroupInfo> list = groupList.getGroups();
+                    Iterator<OpenShiftGroupInfo> it = list.iterator();
+                    OpenShiftGroupInfo grpInfo = null;
+                    while (it.hasNext()) {
+                        grpInfo = it.next();
+                        newAuthMgr.add(injPerm, grpInfo.getName());
+                    }
+    
+                    if (LOGGER.isLoggable(Level.FINE))
+                        LOGGER.fine(String.format("ELOS updateAuthorizationStrategy: groups test inject call "));
+                }
+    
+                Jenkins.getInstance().setAuthorizationStrategy(newAuthMgr);
+                try {
+                    Jenkins.getInstance().save();
+                } catch (Throwable t) {
+                    // see https://jenkins.io/blog/2018/03/15/jep-200-lts/#after-the-upgrade
+                    // running on 2.107 ... seen intermittent errors here, even after
+                    // marking transport transient (as the xml stuff does not use standard
+                    // serialization; switch from transient instance var to static var to
+                    // attempt to avoid xml marshalling;
+                    // Always logging for now, but will monitor and bracket with a FINE
+                    // logging level check if this becomes very verbose.
+                    LOGGER.log(INFO, "updateAuthorizationStrategy", t);
+                }
+            }
+        }
+    }
+
     private String buildSARJson(String namespace, String verb) throws IOException {
         OpenShiftSubjectAccessReviewRequest request = new OpenShiftSubjectAccessReviewRequest();
         request.namespace = namespace;
