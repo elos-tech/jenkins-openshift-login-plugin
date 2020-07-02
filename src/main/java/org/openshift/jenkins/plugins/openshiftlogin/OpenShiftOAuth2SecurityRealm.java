@@ -46,9 +46,11 @@ import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -120,7 +122,7 @@ import jenkins.security.SecurityListener;
  *
  */
 @SuppressFBWarnings
-public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Serializable{
+public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Serializable {
     private static final String EMPTY_STRING = "";
 
     static final Logger LOGGER = Logger.getLogger(OpenShiftOAuth2SecurityRealm.class.getName());
@@ -162,7 +164,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
     private static final String PORT_SEPARATOR = ":";
     private final static Locale DEFAULT_LOCALE_PERMISSION = Locale.US;
     public static final String SECURITY_REALM_FINISH_LOGIN = "/securityRealm/finishLogin";
-  
+
     static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
 
     private static final Object USER_UPDATE_LOCK = new Object();
@@ -417,13 +419,12 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             } else {
                 runningInOpenShiftPodWithRequiredOAuthFeatures = false;
             }
-            //      ELOS test groups call entry
+            // ELOS test groups call entry
             //
             String groups = setOpenShiftGroups(credential, transport);
-            
+
             if (LOGGER.isLoggable(INFO))
                 LOGGER.info("ISSUE RBO2-78: Test log..  " + groups);
-
 
         } catch (Throwable t) {
             runningInOpenShiftPodWithRequiredOAuthFeatures = false;
@@ -447,16 +448,23 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         }
 
         if (withinAPod) {
-            String redactedClientSecret = Secret.toString(this.clientSecret).length() > 6 ? Secret.toString(this.clientSecret).substring(0, 5) + "......." : "null";
-            String redactedDefaultClientSecret = this.defaultedClientSecret != null && this.defaultedClientSecret.length() > 6 ? this.defaultedClientSecret.substring(0, 5) + "......." : "null";
+            String redactedClientSecret = Secret.toString(this.clientSecret).length() > 6
+                    ? Secret.toString(this.clientSecret).substring(0, 5) + "......."
+                    : "null";
+            String redactedDefaultClientSecret = this.defaultedClientSecret != null
+                    && this.defaultedClientSecret.length() > 6 ? this.defaultedClientSecret.substring(0, 5) + "......."
+                            : "null";
             String msg1 = "OpenShift OAuth running in k8s/openshift: [%s] with namespace [%s] ServiceAccount directory [%s]";
             String msg2 = "     default ServiceAccount directory [%s] , serviceAccountName [%s], ";
             String msg3 = "     clientId: [%s],  default clientID: [%s], clientSecret: [%s], default clientSecret: [%s],";
             String msg4 = "     redirectUrl: [%s], default redirectUrl: [%s], serverPrefix: [%s], defaultedServerPrefix:[%s]";
-            LOGGER.info(format( msg1, runningInOpenShiftPodWithRequiredOAuthFeatures, this.namespace, this.serviceAccountDirectory ));
+            LOGGER.info(format(msg1, runningInOpenShiftPodWithRequiredOAuthFeatures, this.namespace,
+                    this.serviceAccountDirectory));
             LOGGER.info(format(msg2, this.defaultedServiceAccountDirectory, this.serviceAccountName));
-            LOGGER.info(format(msg3, this.defaultedServiceAccountName, this.clientId, this.defaultedClientId, redactedClientSecret, redactedDefaultClientSecret));
-            LOGGER.info(format(msg4, this.redirectURL, this.defaultedRedirectURL, this.serverPrefix, this.defaultedServerPrefix));
+            LOGGER.info(format(msg3, this.defaultedServiceAccountName, this.clientId, this.defaultedClientId,
+                    redactedClientSecret, redactedDefaultClientSecret));
+            LOGGER.info(format(msg4, this.redirectURL, this.defaultedRedirectURL, this.serverPrefix,
+                    this.defaultedServerPrefix));
         }
         return runningInOpenShiftPodWithRequiredOAuthFeatures;
     }
@@ -539,7 +547,8 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
 
     private OpenShiftProviderInfo getOpenShiftOAuthProvider(final Credential credential, final HttpTransport transport)
             throws IOException {
-        HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
+        HttpRequestFactory requestFactory = transport
+                .createRequestFactory(new CredentialHttpRequestInitializer(credential));
         String oauthProviderUrl = getDefaultedServerPrefix() + OAUTH_PROVIDER_URI;
         LOGGER.info("Trying to determine OpenShift Provider information from URL: " + oauthProviderUrl);
         GenericUrl url = new GenericUrl(oauthProviderUrl);
@@ -554,7 +563,8 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         if (provider == null)
             return transport;
         try {
-            HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
+            HttpRequestFactory requestFactory = transport
+                    .createRequestFactory(new CredentialHttpRequestInitializer(credential));
             GenericUrl url = new GenericUrl(provider.token_endpoint);
             HttpRequest request = requestFactory.buildHeadRequest(url);
             request.execute().getStatusCode();
@@ -625,44 +635,50 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
 
     private boolean useProviderOAuthEndpoint(final Credential credential) {
         if (provider == null) {
-            LOGGER.log(WARNING,  "OpenShift OAuth has not provider defined.");
+            LOGGER.log(WARNING, "OpenShift OAuth has not provider defined.");
             return false;
         }
         try {
-            LOGGER.info( "OpenShift OAuth will query  " + defaultedServerPrefix + "/version with credentials " + credential );
+            LOGGER.info(
+                    "OpenShift OAuth will query  " + defaultedServerPrefix + "/version with credentials " + credential);
             GenericUrl url = new GenericUrl(defaultedServerPrefix + "/version");
-            HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
+            HttpRequestFactory requestFactory = transport
+                    .createRequestFactory(new CredentialHttpRequestInitializer(credential));
             HttpRequest request = requestFactory.buildGetRequest(url);
             com.google.api.client.http.HttpResponse response = request.execute();
             int rc = response.getStatusCode();
             if (rc != HTTP_OK) {
-                LOGGER.info( "OpenShift OAuth the attempt to get the server version request got an unexpected return code: " + rc);
+                LOGGER.info(
+                        "OpenShift OAuth the attempt to get the server version request got an unexpected return code: "
+                                + rc);
             }
-            LOGGER.info( "Server succesfully queried to get OpenShift version, now parsing it..." );
+            LOGGER.info("Server succesfully queried to get OpenShift version, now parsing it...");
             OpenShiftVersionInfo version = response.parseAs(OpenShiftVersionInfo.class);
-            if (version != null ) { 
+            if (version != null) {
                 boolean isOpenShift3Cluster = version.isOpenShift3Cluster();
-                LOGGER.info( "Now checking if we are on an OpenShift3 cluster and the answer is:  " + isOpenShift3Cluster);
-                // For now, this will always return true if "version" is not null, basically if we are in OpenShift
-                //TODO check if we can just return true
+                LOGGER.info(
+                        "Now checking if we are on an OpenShift3 cluster and the answer is:  " + isOpenShift3Cluster);
+                // For now, this will always return true if "version" is not null, basically if
+                // we are in OpenShift
+                // TODO check if we can just return true
                 return isOpenShift3Cluster || version.isOpenShift4Cluster();
             }
         } catch (Throwable t) {
             LOGGER.log(Level.INFO, "Failed to get version attempt failed", t);
         }
-        LOGGER.info( "Determining OpenShift version failed...falling back into OpenShift3 behaviour");
+        LOGGER.info("Determining OpenShift version failed...falling back into OpenShift3 behaviour");
         // default to old, traditional 3.x behavior
         return false;
     }
 
-
     private OpenShiftUserInfo getOpenShiftUserInfo(final Credential credential, final HttpTransport transport)
             throws IOException {
-        HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
+        HttpRequestFactory requestFactory = transport
+                .createRequestFactory(new CredentialHttpRequestInitializer(credential));
         GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + USER_URI);
         HttpRequest request = requestFactory.buildGetRequest(url);
         OpenShiftUserInfo info = request.execute().parseAs(OpenShiftUserInfo.class);
-        
+
         return info;
     }
 
@@ -672,13 +688,12 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         String usr;
         OpenShiftUserInfo usrInfo = null;
 
-        if(!username.endsWith("-view")) 
+        if (!username.endsWith("-view"))
             throw new UsernameNotFoundException("Given principal name is a group, not an user.");
         else {
             // user is OCP user with plugin suffix
             int idx = username.indexOf("-");
             usr = username.substring(0, idx);
-            
 
             // TODO refactor to OpenShiftAuthenticationProvider?
             
@@ -691,12 +706,17 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             
             try {
                 HttpRequest request = requestFactory.buildGetRequest(url);
-                usrInfo = request.execute().parseAs(OpenShiftUserInfo.class);
-                LOGGER.log(Level.FINE, "Loaded OCP user:", usrInfo.toString());
-                
-
+                com.google.api.client.http.HttpResponse response = request.execute();
+                LOGGER.log(Level.FINE, "Response msg: " + (response.getStatusMessage() == null ? "null" : response.getStatusMessage() ));
+                // LOGGER.log(Level.FINE, "Response content: " + (response.getContent() == null ? "null" : response.parseAsString() ));
+                usrInfo = response.parseAs(OpenShiftUserInfo.class);
+                LOGGER.log(Level.FINE, "OCP user credential: " + credential.toString());
+                LOGGER.log(Level.FINE, "OCP user response on URL: " + url.build());
+                LOGGER.log(Level.FINE, "OCP user response transport: " + transport.toString());
+                // LOGGER.log(Level.FINE, "OCP user response: " + response.parseAsString());
+                LOGGER.log(Level.FINE, "Loaded OCP user: " + usrInfo.getName());
             } catch (IOException e) {
-                LOGGER.log(Level.INFO, "Failed to get OCP user", e);
+                LOGGER.log(Level.INFO, "Failed to get OCP user: ", e);
             }
         }
         // create a groups list for given user
@@ -704,11 +724,11 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         // for(OpenShiftGroupInfo i : this.ocpGroupList.getGroups()) {
         //     userGroups.add(new GrantedAuthorityImpl(i.getName()));
         // }
-        userGroups.add(new GrantedAuthorityImpl("jenkins-dev"));
+        userGroups.add(new GrantedAuthorityImpl("jenkins-test"));
         userGroups.add(SecurityRealm.AUTHENTICATED_AUTHORITY);
 
         
-        return (UserDetails) new OpenShiftUserDetail(username, null, false, true, true, true,
+        return (UserDetails) new OpenShiftUserDetail(username, null, true, true, true, true,
                 userGroups.toArray(new GrantedAuthority[0]));
     }
 
@@ -747,114 +767,41 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
     // ELOS
     @Override
     public GroupDetails loadGroupByGroupname(String groupname) throws UsernameNotFoundException, DataAccessException {
-        
-        OpenShiftGroupDetails groupdetails = null;
+        return loadGroupByGroupname(groupname, false);
+    }
+    
+    // ELOS
+    @Override
+    public GroupDetails loadGroupByGroupname(String groupname, boolean fetchMembers) throws UsernameNotFoundException, DataAccessException {
+        LOGGER.fine("ELOS: calling loadGroupByName: " + groupname);
+        OpenShiftGroupDetails groupDetails = null;
+        OpenShiftGroupInfo groupinfo = null;
         // TODO Refactor OCP API access using Jenkins SA
-
-        boolean runningInOpenShiftPodWithRequiredOAuthFeatures = EnvVars.masterEnvVars.get(K8S_HOST_ENV_VAR) != null
-                && EnvVars.masterEnvVars.get(K8S_PORT_ENV_VAR) != null;
-        // we want to be verbose wrt error logging if we are at least running
-        // within a pod ... but if we know we are outside a pod, only
-        // log if trace enabled
-        boolean withinAPod = runningInOpenShiftPodWithRequiredOAuthFeatures
-                || (new File(getDefaultedServiceAccountDirectory())).exists();
-
-        FileInputStream fis = null;
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new FileReader(new File(getDefaultedServiceAccountDirectory(), NAMESPACE)));
-            namespace = br.readLine();
-            runningInOpenShiftPodWithRequiredOAuthFeatures = runningInOpenShiftPodWithRequiredOAuthFeatures
-                    && (namespace != null ? namespace.length() > 0 : false);
-            br = new BufferedReader(new FileReader(new File(getDefaultedServiceAccountDirectory(), TOKEN)));
-            defaultedClientSecret = br.readLine();
-            runningInOpenShiftPodWithRequiredOAuthFeatures = runningInOpenShiftPodWithRequiredOAuthFeatures
-                    && (defaultedClientSecret != null ? defaultedClientSecret.length() > 0 : false);
-            fis = new FileInputStream(new File(getDefaultedServiceAccountDirectory(), CA_CRT));
-            KeyStore keyStore = SecurityUtils.getDefaultKeyStore();
-            try {
-                keyStore.size();
-            } catch (KeyStoreException e) {
-                keyStore.load(null);
-            }
-            SecurityUtils.loadKeyStoreFromCertificates(keyStore, SecurityUtils.getX509CertificateFactory(), fis);
-            transport = new NetHttpTransport.Builder().trustCertificates(keyStore).build();
-        } catch (FileNotFoundException e) {
-            runningInOpenShiftPodWithRequiredOAuthFeatures = false;
-            if (LOGGER.isLoggable(Level.FINE) || withinAPod)
-                LOGGER.log(Level.FINE, "Get OCP API", e);
-        } catch (IOException e) {
-            if (LOGGER.isLoggable(Level.FINE) || withinAPod)
-                LOGGER.log(Level.FINE, "Get OCP API", e);
-        } catch (GeneralSecurityException e) {
-            if (LOGGER.isLoggable(Level.FINE) || withinAPod)
-                LOGGER.log(Level.FINE, "Get OCP API", e);
-        } finally {
-            if (fis != null)
-            try {
-                fis.close();
-            } catch (IOException e) {
-                if (LOGGER.isLoggable(Level.FINE) || withinAPod)
-                    LOGGER.log(Level.FINE, "Get OCP API", e);
-            }
-            if (br != null)
-            try {
-                br.close();
-            } catch (IOException e) {
-                if (LOGGER.isLoggable(Level.FINE) || withinAPod)
-                    LOGGER.log(Level.FINE, "Get OCP API", e);
-            }  
-        }
 
         final Credential credential = new Credential(BearerToken.authorizationHeaderAccessMethod())
                 .setAccessToken(getDefaultedClientSecret().getPlainText());
+        
+        HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
+        GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + GROUPS_URI + "/" + groupname);
+        HttpRequest request;
         try {
-            OpenShiftUserInfo user = getOpenShiftUserInfo(credential, transport);
-            String[] userNameParts = user.getName().split(":");
-            if (userNameParts != null && userNameParts.length == 4) {
-                defaultedServiceAccountName = userNameParts[3];
-            }
-            runningInOpenShiftPodWithRequiredOAuthFeatures = runningInOpenShiftPodWithRequiredOAuthFeatures
-                    && (defaultedServiceAccountName != null ? defaultedServiceAccountName.length() > 0 : false);
-            defaultedClientId = "system:serviceaccount:" + namespace + ":" + getDefaultedServiceAccountName();
-
-            provider = getOpenShiftOAuthProvider(credential, transport);
-            if (withinAPod)
-                LOGGER.info(String.format("OpenShift OAuth: provider: %s", provider));
-            if (provider != null) {
-                // the issuer is the public address of the k8s svc; use this vs.
-                // the hostname or ip/port that is only available within the
-                // cluster
-                this.defaultedRedirectURL = provider.issuer;
-                // for diagnostics: see if the provider endpoints are accessible, given what
-                // Mo told me about them moving the oauth server from internal to a route based
-                // external one
-                // on the fly
-                if (this.useProviderOAuthEndpoint(credential))
-                    this.transportToUse(credential);
-            } else {
-                runningInOpenShiftPodWithRequiredOAuthFeatures = false;
-            }
-            
-            HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
-            GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + GROUPS_URI + "/" + groupname);
-            HttpRequest request = requestFactory.buildGetRequest(url);
-            
-            OpenShiftGroupInfo groupinfo = request.execute().parseAs(OpenShiftGroupInfo.class);
-            groupdetails = new OpenShiftGroupDetails(groupinfo.getName());
-
-
-        } catch (Throwable t) {
-            runningInOpenShiftPodWithRequiredOAuthFeatures = false;
-            if (LOGGER.isLoggable(Level.FINE))
-                LOGGER.log(Level.FINE, "load groups", t);
-            else if (withinAPod)
-                LOGGER.log(Level.INFO, "load groups", t);
+            request = requestFactory.buildGetRequest(url);
+            groupinfo = request.execute().parseAs(OpenShiftGroupInfo.class);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            LOGGER.fine("ELOS: problem calling loadGroupByName: " + e);
         }
+        groupDetails = new OpenShiftGroupDetails(groupinfo.getName());
+        if(fetchMembers == true) {
+            LOGGER.fine("ELOS: found groups: " + groupinfo.getUsers().toString());
+            Set<String> members = new HashSet<String>(groupinfo.getUsers());
+            groupDetails = new OpenShiftGroupDetails(groupDetails.getName(), members);
 
-        return groupdetails;
+        }
+        LOGGER.fine("ELOS: found loadGroupByName: " + groupDetails.getDisplayName() + " " + groupDetails.getName());
+        return groupDetails;
     }
-    
+
     // ELOS
     public void updateAuthorizationStrategyWithGroups(OpenShiftGroupList groupList) {
 
