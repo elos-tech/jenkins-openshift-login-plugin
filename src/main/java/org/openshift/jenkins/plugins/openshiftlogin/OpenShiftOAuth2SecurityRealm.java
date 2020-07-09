@@ -688,13 +688,13 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         String usr;
         OpenShiftUserInfo usrInfo = null;
 
-        if (!username.endsWith("-view"))
-            throw new UsernameNotFoundException("Given principal name is a group, not an user.");
-        else {
+        // if (!username.endsWith("-view"))
+        //     throw new UsernameNotFoundException("Given principal name is a group, not an user.");
+        // else {
             // user is OCP user with plugin suffix
-            int idx = username.indexOf("-");
-            usr = username.substring(0, idx);
-
+            // int idx = username.indexOf("-");
+            // usr = username.substring(0, idx);
+            usr = username;
             // TODO refactor to OpenShiftAuthenticationProvider?
             
             final Credential credential = new Credential(BearerToken.authorizationHeaderAccessMethod())
@@ -718,17 +718,19 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             } catch (IOException e) {
                 LOGGER.log(Level.INFO, "Failed to get OCP user: ", e);
             }
-        }
+        // }
         // create a groups list for given user
         List<GrantedAuthority> userGroups = new ArrayList<>();
         // for(OpenShiftGroupInfo i : this.ocpGroupList.getGroups()) {
         //     userGroups.add(new GrantedAuthorityImpl(i.getName()));
         // }
         userGroups.add(new GrantedAuthorityImpl("jenkins-test"));
-        userGroups.add(SecurityRealm.AUTHENTICATED_AUTHORITY);
+        userGroups.add(new GrantedAuthorityImpl("jenkins-dev"));
+        userGroups.add(new GrantedAuthorityImpl("jenkins-monitor"));
+        // userGroups.add(SecurityRealm.AUTHENTICATED_AUTHORITY);
 
         
-        return (UserDetails) new OpenShiftUserDetail(username, null, true, true, true, true,
+        return (UserDetails) new OpenShiftUserDetail(username, "", true, true, true, true,
                 userGroups.toArray(new GrantedAuthority[0]));
     }
 
@@ -767,7 +769,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
     // ELOS
     @Override
     public GroupDetails loadGroupByGroupname(String groupname) throws UsernameNotFoundException, DataAccessException {
-        return loadGroupByGroupname(groupname, false);
+        return loadGroupByGroupname(groupname, true);
     }
     
     // ELOS
@@ -792,13 +794,23 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             LOGGER.fine("ELOS: problem calling loadGroupByName: " + e);
         }
         groupDetails = new OpenShiftGroupDetails(groupinfo.getName());
-        if(fetchMembers == true) {
+        
+        if(fetchMembers) {
             LOGGER.fine("ELOS: found groups: " + groupinfo.getUsers().toString());
-            Set<String> members = new HashSet<String>(groupinfo.getUsers());
+            // Set<String> members = new HashSet<String>(groupinfo.getUsers());
+            Set<String> members = new HashSet<String>();
+            members.add("developer-admin-edit-view");
+            members.add("developer");
             groupDetails = new OpenShiftGroupDetails(groupDetails.getName(), members);
 
         }
-        LOGGER.fine("ELOS: found loadGroupByName: " + groupDetails.getDisplayName() + " " + groupDetails.getName());
+        // HACK for test
+        Set<String> members = new HashSet<String>();
+        members.add("developer-admin-edit-view");
+        members.add("developer");
+        groupDetails = new OpenShiftGroupDetails(groupDetails.getName(), members);
+        
+        LOGGER.fine("ELOS: found loadGroupByName: " + groupDetails.getName() + " " + groupDetails.getMembers().toString());
         return groupDetails;
     }
 
@@ -1081,7 +1093,9 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         OpenShiftUserInfo info = getOpenShiftUserInfo(credential, transport);
         Map<String, List<Permission>> cfgedRolePermMap = getRoleToPermissionMap(transport);
         ArrayList<String> allowedRoles = postSAR(credential, transport);
-        GrantedAuthority[] authorities = new GrantedAuthority[] { SecurityRealm.AUTHENTICATED_AUTHORITY };
+        GrantedAuthority[] authorities = new GrantedAuthority[2];
+        authorities[0] =  SecurityRealm.AUTHENTICATED_AUTHORITY;
+        authorities[1] = new GrantedAuthorityImpl("jenkins-test");
 
         // we append the role suffix to the name stored into Jenkins, since a
         // given user is able to log in at varying scope/permission
@@ -1113,7 +1127,9 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         // assigned to the view role
         UsernamePasswordAuthenticationToken token = null;
         if (suffix != null) {
-            String matrixKey = info.getName() + suffix;
+            // ELOS String matrixKey = info.getName() + suffix;
+            String matrixKey = info.getName();
+
             token = new UsernamePasswordAuthenticationToken(matrixKey, EMPTY_STRING, authorities);
             SecurityContextHolder.getContext().setAuthentication(token);
 
@@ -1155,7 +1171,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
                     LOGGER.fine(String.format("updateAuthorizationStrategy: got users %s where this user is %s",
                             usersGroups.toString(), info.getName()));
 
-                if (usersGroups.contains(matrixKey)) { 
+                if (usersGroups.contains(matrixKey) && false) { 
                     // since we store username-maxrole in the auth matrix, we
                     // can infer that since this user-role pair already exists
                     // as a key, there is no need to update the matrix
@@ -1204,6 +1220,8 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
                         }
 
                         Jenkins.getInstance().setAuthorizationStrategy(newAuthMgr);
+                        // ELOS
+                        LOGGER.fine("ELOS:  newAuthMgr groups: " + newAuthMgr.getGroups().toString()); 
                         try {
                             Jenkins.getInstance().save();
                         } catch (Throwable t) {
