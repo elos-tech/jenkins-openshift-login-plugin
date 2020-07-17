@@ -697,11 +697,13 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             usr = username;
             // TODO refactor to OpenShiftAuthenticationProvider?
             
+            OpenShiftGroupList groups = getOpenShiftGroups();
+
             final Credential credential = new Credential(BearerToken.authorizationHeaderAccessMethod())
                     .setAccessToken(getDefaultedClientSecret().getPlainText());
             
             HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
-            GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + USER_URI.substring(0, USER_URI.length()-1) + usr);
+            GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + USER_URI.substring(0, USER_URI.length()-1) +"/"+ usr);
             
             
             try {
@@ -715,28 +717,58 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
                 LOGGER.log(Level.FINE, "OCP user response transport: " + transport.toString());
                 // LOGGER.log(Level.FINE, "OCP user response: " + response.parseAsString());
                 LOGGER.log(Level.FINE, "Loaded OCP user: " + usrInfo.getName());
+
+                
             } catch (IOException e) {
                 LOGGER.log(Level.INFO, "Failed to get OCP user: ", e);
             }
         // }
         // create a groups list for given user
+        
         List<GrantedAuthority> userGroups = new ArrayList<>();
-        // for(OpenShiftGroupInfo i : this.ocpGroupList.getGroups()) {
-        //     userGroups.add(new GrantedAuthorityImpl(i.getName()));
-        // }
-        userGroups.add(new GrantedAuthorityImpl("jenkins-test"));
-        userGroups.add(new GrantedAuthorityImpl("jenkins-dev"));
-        userGroups.add(new GrantedAuthorityImpl("jenkins-monitor"));
-        // userGroups.add(SecurityRealm.AUTHENTICATED_AUTHORITY);
+        List<OpenShiftGroupInfo> grplist = groups.getGroups();
+        Iterator<OpenShiftGroupInfo> it = grplist.iterator();
+        OpenShiftGroupInfo info = null;
+        userGroups.add(SecurityRealm.AUTHENTICATED_AUTHORITY);
+        
+        while (it.hasNext()) {
+            info = it.next();
+
+            if(info.users.contains(username)) {
+                userGroups.add(new GrantedAuthorityImpl(info.getName()));
+                LOGGER.log(Level.FINE, "Added OCP user authority: " + info.getName() + " for user: " + username);
+            }
+        }
+        
+
+        LOGGER.fine("Loaded groups: " + userGroups.toString());
 
         
         return (UserDetails) new OpenShiftUserDetail(username, "", true, true, true, true,
-                userGroups.toArray(new GrantedAuthority[0]));
+                userGroups.toArray(new GrantedAuthority[userGroups.size()]));
+    }
+    
+    // ELOS
+    private OpenShiftGroupList getOpenShiftGroups() {
+        
+        OpenShiftGroupList groups = null;
+
+        // TODO refactor into auth provider
+        final Credential credential = new Credential(BearerToken.authorizationHeaderAccessMethod())
+                    .setAccessToken(getDefaultedClientSecret().getPlainText());
+        HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
+        GenericUrl url = new GenericUrl(getDefaultedServerPrefix() + GROUPS_URI);
+
+        try {
+            HttpRequest request = requestFactory.buildGetRequest(url);
+            groups = request.execute().parseAs(OpenShiftGroupList.class);
+        } catch (IOException e) {
+            LOGGER.log(Level.INFO, "Failed to get OCP user: ", e);
+        }
+        return groups;
     }
 
     
-    
-
     // ELOS
     private String setOpenShiftGroups(final Credential credential, final HttpTransport transport)
             throws IOException {
@@ -797,18 +829,10 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         
         if(fetchMembers) {
             LOGGER.fine("ELOS: found groups: " + groupinfo.getUsers().toString());
-            // Set<String> members = new HashSet<String>(groupinfo.getUsers());
-            Set<String> members = new HashSet<String>();
-            members.add("developer-admin-edit-view");
-            members.add("developer");
+            Set<String> members = new HashSet<String>(groupinfo.getUsers());
+            // Set<String> members = new HashSet<String>();
             groupDetails = new OpenShiftGroupDetails(groupDetails.getName(), members);
-
         }
-        // HACK for test
-        Set<String> members = new HashSet<String>();
-        members.add("developer-admin-edit-view");
-        members.add("developer");
-        groupDetails = new OpenShiftGroupDetails(groupDetails.getName(), members);
         
         LOGGER.fine("ELOS: found loadGroupByName: " + groupDetails.getName() + " " + groupDetails.getMembers().toString());
         return groupDetails;
@@ -856,9 +880,6 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
                         grpInfo = it.next();
                         newAuthMgr.add(injPerm, grpInfo.getName());
                     }
-    
-                    if (LOGGER.isLoggable(Level.FINE))
-                        LOGGER.fine(String.format("ELOS updateAuthorizationStrategy: groups test inject call "));
                 }
     
                 Jenkins.getInstance().setAuthorizationStrategy(newAuthMgr);
@@ -1091,11 +1112,17 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
             throws IOException, GeneralSecurityException {
         populateDefaults();
         OpenShiftUserInfo info = getOpenShiftUserInfo(credential, transport);
+        UserDetails usrDetails = loadUserByUsername(info.getName());
+
         Map<String, List<Permission>> cfgedRolePermMap = getRoleToPermissionMap(transport);
         ArrayList<String> allowedRoles = postSAR(credential, transport);
-        GrantedAuthority[] authorities = new GrantedAuthority[2];
-        authorities[0] =  SecurityRealm.AUTHENTICATED_AUTHORITY;
-        authorities[1] = new GrantedAuthorityImpl("jenkins-test");
+        
+        // ELOS
+        GrantedAuthority[] authorities = usrDetails.getAuthorities();
+
+        //GrantedAuthority[] authorities = new GrantedAuthority[2];        
+        //authorities[0] =  SecurityRealm.AUTHENTICATED_AUTHORITY;
+        //authorities[1] = new GrantedAuthorityImpl("jenkins-test");
 
         // we append the role suffix to the name stored into Jenkins, since a
         // given user is able to log in at varying scope/permission
@@ -1127,6 +1154,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         // assigned to the view role
         UsernamePasswordAuthenticationToken token = null;
         if (suffix != null) {
+            
             // ELOS String matrixKey = info.getName() + suffix;
             String matrixKey = info.getName();
 
