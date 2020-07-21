@@ -26,12 +26,12 @@ package org.openshift.jenkins.plugins.openshiftlogin;
 
 import java.util.List;
 
-import com.google.api.client.json.GenericJson;
+// import com.google.api.client.json.GenericJson;
 import com.google.api.client.util.Key;
 
-public class OpenShiftGroupInfo extends GenericJson {
+public class OpenShiftGroupInfo {
 
-    public static class Metadata extends GenericJson {
+    public static class Metadata {
         @Key
         public String name;
     }
