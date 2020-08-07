@@ -32,6 +32,11 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 @SuppressFBWarnings
 public class OpenShiftUserDetails implements UserDetails {
     
+    /**
+     *
+     */
+    private static final long serialVersionUID = 8478336312809326632L;
+    
     private String name;
     private GrantedAuthority[] authorities;
 
