@@ -110,8 +110,8 @@ public class OpenShiftAuthenticationProvider implements UserDetailsService {
     public GroupDetails loadGroupByGroupname(String groupname, boolean fetchMembers) throws UsernameNotFoundException, DataAccessException {
         
         LOGGER.fine("ELOS: calling loadGroupByName: " + groupname);
-        OpenShiftGroupDetails groupDetails = null;
-        OpenShiftGroupInfo groupinfo = null;
+        OpenShiftGroupDetails groupDetails;
+        OpenShiftGroupInfo groupinfo;
 
         final Credential credential = new Credential(BearerToken.authorizationHeaderAccessMethod())
                 .setAccessToken(this.token);
@@ -121,24 +121,26 @@ public class OpenShiftAuthenticationProvider implements UserDetailsService {
         HttpRequest request;
         
         
-        if(fetchMembers) {
+        //if(fetchMembers) {
             try {
                 request = requestFactory.buildGetRequest(url);
                 groupinfo = request.execute().parseAs(OpenShiftGroupInfo.class);
             } catch (IOException e) {
                 LOGGER.fine("ELOS: problem calling loadGroupByName: " + e);
+                throw new UsernameNotFoundException("ELOS: Group not found or not accessible");
             }
             groupDetails = new OpenShiftGroupDetails(groupinfo.getName());
             LOGGER.fine("ELOS: found groups: " + groupinfo.getUsers().toString());
             Set<String> members = new HashSet<String>(groupinfo.getUsers());
             groupDetails = new OpenShiftGroupDetails(groupDetails.getName(), members);
-        }
+        //}
         
         LOGGER.fine("ELOS: found loadGroupByName: " + groupDetails.getName() + " " + groupDetails.getMembers().toString());
-        if (groupDetails == null) {
-            throw new UsernameNotFoundException("ELOS: Group not found or not accessible");
-        } else
-            return groupDetails;
+        // if (groupDetails == null) {
+        //     throw new UsernameNotFoundException("ELOS: Group not found or not accessible");
+        // } else
+        //     return groupDetails;
+        return groupDetails;
     }
     
 }
