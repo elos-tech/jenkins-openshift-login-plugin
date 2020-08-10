@@ -146,7 +146,6 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
     private static final String LOGIN_URL = "securityRealm/commenceLogin";
 
     private static final String USER_URI = "/apis/user.openshift.io/v1/users/~";
-    private static final String GROUPS_URI = "/apis/user.openshift.io/v1/groups"; // ELOS
 
     private static final String SAR_URI = "/apis/authorization.openshift.io/v1/subjectaccessreviews";
     private static final String CONFIG_MAP_URI = "/api/v1/namespaces/%s/configmaps/openshift-jenkins-login-plugin-config";
@@ -947,6 +946,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
         Map<String, List<Permission>> cfgedRolePermMap = getRoleToPermissionMap(transport);
         ArrayList<String> allowedRoles = postSAR(credential, transport);
         
+        // GrantedAuthority[] authorities = new GrantedAuthority[] { SecurityRealm.AUTHENTICATED_AUTHORITY };
         // ELOS
         GrantedAuthority[] authorities = usrDetails.getAuthorities();
 
@@ -1025,7 +1025,7 @@ public class OpenShiftOAuth2SecurityRealm extends SecurityRealm implements Seria
                     LOGGER.fine(String.format("updateAuthorizationStrategy: got users %s where this user is %s",
                             usersGroups.toString(), info.getName()));
 
-                if (usersGroups.contains(matrixKey) && false) { 
+                if (usersGroups.contains(matrixKey)) { 
                     // since we store username-maxrole in the auth matrix, we
                     // can infer that since this user-role pair already exists
                     // as a key, there is no need to update the matrix

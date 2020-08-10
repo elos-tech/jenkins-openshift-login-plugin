@@ -54,28 +54,17 @@ public class OpenShiftAuthenticationProvider implements UserDetailsService {
         
         final Credential credential = new Credential(BearerToken.authorizationHeaderAccessMethod())
                 .setAccessToken(token);
-        OpenShiftUserInfo usrInfo = null;
         
+        OpenShiftUserInfo usrInfo = null;
         OpenShiftGroupList groups = getOpenShiftGroups(this.token, this.transport, this.serverUrl);
 
-        
         HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
         GenericUrl url = new GenericUrl(serverUrl + USER_URI.substring(0, USER_URI.length()-1) +"/"+ username);
-        
-        
+
         try {
             HttpRequest request = requestFactory.buildGetRequest(url);
-            com.google.api.client.http.HttpResponse response = request.execute();
-            LOGGER.log(Level.FINE, "Response msg: " + (response.getStatusMessage() == null ? "null" : response.getStatusMessage() ));
-            // LOGGER.log(Level.FINE, "Response content: " + (response.getContent() == null ? "null" : response.parseAsString() ));
-            usrInfo = response.parseAs(OpenShiftUserInfo.class);
-            LOGGER.log(Level.FINE, "OCP user credential: " + credential.toString());
-            LOGGER.log(Level.FINE, "OCP user response on URL: " + url.build());
-            LOGGER.log(Level.FINE, "OCP user response transport: " + transport.toString());
-            // LOGGER.log(Level.FINE, "OCP user response: " + response.parseAsString());
+            usrInfo = request.execute().parseAs(OpenShiftUserInfo.class);
             LOGGER.log(Level.FINE, "Loaded OCP user: " + usrInfo.getName());
-
-            
         } catch (IOException e) {
             LOGGER.log(Level.INFO, "Failed to get OCP user: " + username, e);
         }
@@ -90,17 +79,12 @@ public class OpenShiftAuthenticationProvider implements UserDetailsService {
         
         while (it.hasNext()) {
             info = it.next();
-
             if(info.users.contains(username)) {
                 userGroups.add(new GrantedAuthorityImpl(info.getName()));
                 LOGGER.log(Level.FINE, "Added OCP user authority: " + info.getName() + " for user: " + username);
             }
         }
-        
-
         LOGGER.fine("Loaded groups: " + userGroups.toString());
-
-        
         return (UserDetails) new OpenShiftUserDetail(username, "", true, true, true, true,
                 userGroups.toArray(new GrantedAuthority[userGroups.size()]));
     }
@@ -135,23 +119,26 @@ public class OpenShiftAuthenticationProvider implements UserDetailsService {
         HttpRequestFactory requestFactory = transport.createRequestFactory(new CredentialHttpRequestInitializer(credential));
         GenericUrl url = new GenericUrl(this.serverUrl + GROUPS_URI + "/" + groupname);
         HttpRequest request;
-        try {
-            request = requestFactory.buildGetRequest(url);
-            groupinfo = request.execute().parseAs(OpenShiftGroupInfo.class);
-        } catch (IOException e) {
-            LOGGER.fine("ELOS: problem calling loadGroupByName: " + e);
-            e.printStackTrace();
-        }
-        groupDetails = new OpenShiftGroupDetails(groupinfo.getName());
+        
         
         if(fetchMembers) {
+            try {
+                request = requestFactory.buildGetRequest(url);
+                groupinfo = request.execute().parseAs(OpenShiftGroupInfo.class);
+            } catch (IOException e) {
+                LOGGER.fine("ELOS: problem calling loadGroupByName: " + e);
+            }
+            groupDetails = new OpenShiftGroupDetails(groupinfo.getName());
             LOGGER.fine("ELOS: found groups: " + groupinfo.getUsers().toString());
             Set<String> members = new HashSet<String>(groupinfo.getUsers());
             groupDetails = new OpenShiftGroupDetails(groupDetails.getName(), members);
         }
         
         LOGGER.fine("ELOS: found loadGroupByName: " + groupDetails.getName() + " " + groupDetails.getMembers().toString());
-        return groupDetails;
+        if (groupDetails == null) {
+            throw new UsernameNotFoundException("ELOS: Group not found or not accessible");
+        } else
+            return groupDetails;
     }
     
 }

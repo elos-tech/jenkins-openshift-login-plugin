@@ -14,7 +14,6 @@ public class OpenShiftUserDetail extends User {
             boolean credentialsNonExpired, boolean accountNonLocked, GrantedAuthority[] authorities)
             throws IllegalArgumentException {
         super(username, password != null ? password : "PASSWORD", enabled, accountNonExpired, credentialsNonExpired, accountNonLocked, authorities);
-        // TODO Auto-generated constructor stub
     }
     
 
